@@ -45,7 +45,7 @@ export default function LoginPage() {
         {/* Subtle geometric pattern / shapes to represent structure, not AI blobs */}
         <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-blue-500 rounded-full opacity-20"></div>
         <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 bg-blue-700 rounded-full opacity-30"></div>
-        
+
         <div className="relative z-10 space-y-6 max-w-lg">
           <div className="flex items-center space-x-3 mb-8">
             <ShieldCheck className="w-10 h-10 text-blue-200" />
@@ -96,23 +96,23 @@ export default function LoginPage() {
                 className="h-11"
               />
             </div>
-            
+
             {error && (
               <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-md">
                 {error}
               </div>
             )}
-            
+
             <Button type="submit" className="w-full h-11 bg-blue-600 hover:bg-blue-700 font-medium text-[15px]">
               Sign In
             </Button>
-            
+
             <div className="mt-6 border-t pt-4">
-               <p className="text-xs text-slate-500 text-center">
-                 Demo Accounts:<br/>
-                 admin@... | officer@... | hospital@... | patient@... <br/>
-                 Password: [Role]@123
-               </p>
+              <p className="text-xs text-slate-500 text-center">
+                Demo Accounts:<br />
+                admin@... | officer@... | hospital@... | patient@... <br />
+                Password: [Role]@123
+              </p>
             </div>
           </form>
         </div>
