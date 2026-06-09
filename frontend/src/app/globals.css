@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+  
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  /* Premium Modern Clinical Aesthetics */
+  --background: #F4F7FA;
+  --foreground: #0B1120;
+
+  --card: #FFFFFF;
+  --card-foreground: #0B1120;
+
+  --popover: #FFFFFF;
+  --popover-foreground: #0B1120;
+
+  --primary: #3B82F6;
+  --primary-foreground: #FFFFFF;
+
+  --secondary: #14B8A6;
+  --secondary-foreground: #FFFFFF;
+
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+
+  --accent: #E0E7FF;
+  --accent-foreground: #3730A3;
+
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #3B82F6;
+
+  --radius: 1rem; /* 16px border radius */
+
+  --chart-1: 221.2 83.2% 53.3%;
+  --chart-2: 173.4 80.4% 26.1%;
+  --chart-3: 142.1 76.2% 36.3%;
+  --chart-4: 38 92% 50%;
+  --chart-5: 0 84.2% 60.2%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image: radial-gradient(at 0% 0%, hsla(210, 100%, 95%, 1) 0, transparent 50%), 
+                      radial-gradient(at 100% 100%, hsla(250, 100%, 95%, 1) 0, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-[0_4px_30px_rgba(0,0,0,0.03)];
+  }
+  
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/50 shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-blue-100/50;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600;
+  }
+
+  .btn-primary-gradient {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all duration-300 active:scale-95;
+  }
+  
+  .table-row-hover {
+    @apply hover:bg-blue-50/50 transition-colors duration-200 cursor-pointer;
+  }
+}
