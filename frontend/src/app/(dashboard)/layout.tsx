@@ -12,7 +12,13 @@ import { Badge } from "@/components/ui/badge";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const cached = localStorage.getItem("cached_user");
+      return cached ? JSON.parse(cached) : null;
+    }
+    return null;
+  });
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
@@ -21,8 +27,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       try {
         const res = await api.get("/auth/me");
         setUser(res.data);
+        localStorage.setItem("cached_user", JSON.stringify(res.data));
         fetchNotifications();
       } catch {
+        localStorage.removeItem("cached_user");
         router.push("/login");
       }
     };
@@ -50,10 +58,70 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("cached_user");
     router.push("/");
   };
 
-  if (!user) return <div className="p-8 text-slate-500 font-medium">Loading system...</div>;
+  if (!user) {
+    return (
+      <div className="flex h-screen bg-slate-50/50 overflow-hidden relative animate-pulse">
+        {/* Sidebar Skeleton */}
+        <aside className="w-[260px] border-r border-slate-200/50 flex flex-col shrink-0 bg-white">
+          <div className="h-16 flex items-center px-6 border-b border-slate-200/50">
+            <div className="w-6 h-6 bg-slate-200 rounded-lg mr-2" />
+            <div className="h-4 w-24 bg-slate-200 rounded" />
+          </div>
+          <div className="flex-1 py-6 px-4 space-y-6">
+            <div className="space-y-2">
+              <div className="h-3 w-12 bg-slate-100 rounded px-2" />
+              <div className="h-10 w-full bg-slate-200 rounded-xl" />
+              <div className="h-10 w-full bg-slate-100 rounded-xl" />
+              <div className="h-10 w-full bg-slate-100 rounded-xl" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-3 w-12 bg-slate-100 rounded px-2" />
+              <div className="h-10 w-full bg-slate-100 rounded-xl" />
+              <div className="h-10 w-full bg-slate-100 rounded-xl" />
+            </div>
+          </div>
+          <div className="p-4 border-t border-slate-200/50 space-y-3">
+            <div className="flex items-center space-x-3 p-2">
+              <div className="w-9 h-9 rounded-full bg-slate-200 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-24 bg-slate-200 rounded" />
+                <div className="h-3 w-32 bg-slate-100 rounded" />
+              </div>
+            </div>
+            <div className="h-10 w-full bg-slate-100 rounded-xl" />
+          </div>
+        </aside>
+
+        {/* Main Content Area Skeleton */}
+        <main className="flex-1 flex flex-col min-w-0">
+          <header className="h-16 border-b border-slate-200/50 flex items-center justify-between px-8 bg-white">
+            <div className="h-10 w-80 bg-slate-100 rounded-xl" />
+            <div className="flex items-center space-x-4">
+              <div className="w-8 h-8 rounded-full bg-slate-200" />
+              <div className="h-6 w-px bg-slate-200" />
+              <div className="h-6 w-20 bg-slate-200 rounded-full" />
+            </div>
+          </header>
+          <div className="flex-1 p-6 md:p-8 space-y-8">
+            <div className="space-y-3">
+              <div className="h-8 w-48 bg-slate-200 rounded-lg" />
+              <div className="h-4 w-72 bg-slate-100 rounded" />
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <div className="h-24 bg-white border border-slate-200/50 rounded-xl" />
+              <div className="h-24 bg-white border border-slate-200/50 rounded-xl" />
+              <div className="h-24 bg-white border border-slate-200/50 rounded-xl" />
+              <div className="h-24 bg-white border border-slate-200/50 rounded-xl" />
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   let links: { name: string; href: string; icon: any }[] = [];
   

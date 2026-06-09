@@ -25,3 +25,10 @@ def get_policies(skip: int = 0, limit: int = 100, db: Session = Depends(database
     else:
         policies = db.query(models.Policy).offset(skip).limit(limit).all()
     return policies
+
+@router.get("/{policy_id}", response_model=policy_schemas.PolicyResponse)
+def get_policy(policy_id: int, db: Session = Depends(database.get_db), current_user: models.User = Depends(deps.get_current_active_user)):
+    policy = db.query(models.Policy).filter(models.Policy.id == policy_id).first()
+    if not policy:
+        raise HTTPException(status_code=404, detail="Policy not found")
+    return policy

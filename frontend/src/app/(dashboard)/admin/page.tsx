@@ -9,24 +9,49 @@ import { ShieldCheck, Activity, XCircle, CheckCircle2, FileText, AlertTriangle }
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any>(null);
-  const [recentClaims, setRecentClaims] = useState<any[]>([]);
-  const [allClaims, setAllClaims] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("cached_admin_stats");
+      return cached ? JSON.parse(cached) : null;
+    }
+    return null;
+  });
+  const [recentClaims, setRecentClaims] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("cached_admin_recent_claims");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
+  const [allClaims, setAllClaims] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("cached_admin_all_claims");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(!stats);
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
         const res = await api.get("/reports/dashboard-summary");
         setStats(res.data);
+        sessionStorage.setItem("cached_admin_stats", JSON.stringify(res.data));
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
     const fetchClaims = async () => {
       try {
         const res = await api.get("/claims/");
         setAllClaims(res.data);
-        setRecentClaims(res.data.slice(0, 5)); // Just show recent 5
+        const sliced = res.data.slice(0, 5);
+        setRecentClaims(sliced);
+        sessionStorage.setItem("cached_admin_all_claims", JSON.stringify(res.data));
+        sessionStorage.setItem("cached_admin_recent_claims", JSON.stringify(sliced));
       } catch (err) {
         console.error(err);
       }
@@ -35,14 +60,12 @@ export default function AdminDashboard() {
     fetchClaims();
   }, []);
 
-  if (!stats) return <div className="text-slate-500 font-medium">Loading system metrics...</div>;
-
-  const statusData = [
+  const statusData = stats ? [
     { name: "Approved", value: stats.approved_claims, color: "#22c55e" },
     { name: "Pending", value: stats.pending_claims, color: "#f59e0b" },
     { name: "Flagged", value: stats.flagged_claims, color: "#ef4444" },
     { name: "Rejected", value: stats.rejected_claims, color: "#64748b" },
-  ].filter(d => d.value > 0);
+  ].filter(d => d.value > 0) : [];
 
   const highRisk = allClaims.filter(c => c.fraud_risk_level === 'HIGH').length;
   const mediumRisk = allClaims.filter(c => c.fraud_risk_level === 'MEDIUM').length;
@@ -70,7 +93,11 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-semibold text-slate-500 mb-1 tracking-wide uppercase">Total Claims</p>
-                <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats.total_claims}</h3>
+                {loading ? (
+                  <div className="h-9 w-20 bg-slate-200 rounded animate-pulse mt-2" />
+                ) : (
+                  <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats?.total_claims || 0}</h3>
+                )}
               </div>
               <div className="p-3 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100/50 rounded-2xl shadow-sm group-hover:scale-110 transition-transform duration-300">
                 <FileText className="w-6 h-6 text-blue-600" />
@@ -85,7 +112,11 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-semibold text-slate-500 mb-1 tracking-wide uppercase">Pending Review</p>
-                <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats.pending_claims || 0}</h3>
+                {loading ? (
+                  <div className="h-9 w-20 bg-slate-200 rounded animate-pulse mt-2" />
+                ) : (
+                  <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats?.pending_claims || 0}</h3>
+                )}
               </div>
               <div className="p-3 bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-100/50 rounded-2xl shadow-sm group-hover:scale-110 transition-transform duration-300">
                 <Activity className="w-6 h-6 text-amber-500" />
@@ -100,10 +131,14 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-semibold text-slate-500 mb-1 tracking-wide uppercase">Flagged Claims</p>
-                <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats.flagged_claims}</h3>
+                {loading ? (
+                  <div className="h-9 w-20 bg-slate-200 rounded animate-pulse mt-2" />
+                ) : (
+                  <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats?.flagged_claims || 0}</h3>
+                )}
               </div>
               <div className="p-3 bg-gradient-to-br from-red-50 to-rose-50 border border-red-100/50 rounded-2xl shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <AlertTriangle className="w-6 h-6 text-red-500 animate-pulse" />
+                <AlertTriangle className="w-6 h-6 text-red-500" />
               </div>
             </div>
           </CardContent>
@@ -115,17 +150,25 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-semibold text-slate-500 mb-1 tracking-wide uppercase">Approved Claims</p>
-                <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats.approved_claims}</h3>
+                {loading ? (
+                  <div className="h-9 w-20 bg-slate-200 rounded animate-pulse mt-2" />
+                ) : (
+                  <h3 className="text-4xl font-extrabold text-slate-900 drop-shadow-sm">{stats?.approved_claims || 0}</h3>
+                )}
               </div>
               <div className="p-3 bg-gradient-to-br from-green-50 to-emerald-50 border border-green-100/50 rounded-2xl shadow-sm group-hover:scale-110 transition-transform duration-300">
                 <CheckCircle2 className="w-6 h-6 text-green-600" />
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-slate-100/50">
-              <p className="text-sm font-semibold text-green-600 flex items-center">
-                <span className="w-2 h-2 rounded-full bg-green-500 mr-2 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
-                Total Value: <span className="ml-1 tracking-tight">${stats.total_paid_amount.toLocaleString()}</span>
-              </p>
+              {loading ? (
+                <div className="h-4 w-32 bg-slate-100 rounded animate-pulse" />
+              ) : (
+                <p className="text-sm font-semibold text-green-600 flex items-center">
+                  <span className="w-2 h-2 rounded-full bg-green-500 mr-2 shadow-[0_0_8px_rgba(34,197,94,0.5)]"></span>
+                  Total Value: <span className="ml-1 tracking-tight">${(stats?.total_paid_amount || 0).toLocaleString()}</span>
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -139,7 +182,9 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-semibold text-slate-900">Claims by Status</h3>
           </div>
           <div className="flex-1 p-4">
-            {statusData.length > 0 ? (
+            {loading ? (
+              <div className="h-full w-full bg-slate-100 rounded-xl animate-pulse flex items-center justify-center text-slate-400 text-sm">Analyzing status distribution...</div>
+            ) : statusData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -170,22 +215,26 @@ export default function AdminDashboard() {
             <h3 className="text-sm font-semibold text-slate-900">Fraud Risk Distribution</h3>
           </div>
           <div className="flex-1 p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={riskData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                <Tooltip 
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {riskData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.name === 'High' ? '#ef4444' : entry.name === 'Medium' ? '#f59e0b' : '#22c55e'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {loading ? (
+              <div className="h-full w-full bg-slate-100 rounded-xl animate-pulse flex items-center justify-center text-slate-400 text-sm">Processing risk factors...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={riskData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                  <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  />
+                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                    {riskData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.name === 'High' ? '#ef4444' : entry.name === 'Medium' ? '#f59e0b' : '#22c55e'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </Card>
       </div>
@@ -208,24 +257,37 @@ export default function AdminDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody className="bg-white/20">
-              {recentClaims.map((claim) => (
-                <TableRow key={claim.id} className="table-row-hover border-b border-slate-100/50 h-16">
-                  <TableCell className="font-semibold text-slate-900">{claim.claim_number || `CLM-${claim.id}`}</TableCell>
-                  <TableCell className="text-slate-600 font-medium">HOSP-{claim.hospital_id}</TableCell>
-                  <TableCell className="text-slate-900 font-bold">${claim.claim_amount}</TableCell>
-                  <TableCell>
-                    {claim.fraud_risk_level === 'HIGH' ? <Badge className="bg-red-50 text-red-700 border-red-200 shadow-none">High</Badge> :
-                     claim.fraud_risk_level === 'MEDIUM' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 shadow-none">Medium</Badge> :
-                     <Badge className="bg-green-50 text-green-700 border-green-200 shadow-none">Low</Badge>}
-                  </TableCell>
-                  <TableCell>
-                    {claim.status === 'APPROVED' ? <Badge className="bg-green-50 text-green-700 border-green-200 shadow-none">Approved</Badge> :
-                     claim.status === 'FLAGGED' ? <Badge className="bg-red-50 text-red-700 border-red-200 shadow-none">Flagged</Badge> :
-                     <Badge className="bg-slate-100 text-slate-700 border-slate-200 shadow-none">{claim.status}</Badge>}
-                  </TableCell>
-                  <TableCell className="text-slate-500 text-sm">{new Date(claim.created_at).toLocaleDateString()}</TableCell>
-                </TableRow>
-              ))}
+              {loading && recentClaims.length === 0 ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                  <TableRow key={idx} className="h-16 border-b border-slate-100/50">
+                    <TableCell><div className="h-4 w-20 bg-slate-200 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 w-24 bg-slate-100 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 w-16 bg-slate-200 rounded animate-pulse" /></TableCell>
+                    <TableCell><div className="h-6 w-12 bg-slate-100 rounded-full animate-pulse" /></TableCell>
+                    <TableCell><div className="h-6 w-16 bg-slate-100 rounded-full animate-pulse" /></TableCell>
+                    <TableCell><div className="h-4 w-20 bg-slate-100 rounded animate-pulse" /></TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                recentClaims.map((claim) => (
+                  <TableRow key={claim.id} className="table-row-hover border-b border-slate-100/50 h-16">
+                    <TableCell className="font-semibold text-slate-900">{claim.claim_number || `CLM-${claim.id}`}</TableCell>
+                    <TableCell className="text-slate-600 font-medium">HOSP-{claim.hospital_id}</TableCell>
+                    <TableCell className="text-slate-900 font-bold">${claim.claim_amount}</TableCell>
+                    <TableCell>
+                      {claim.fraud_risk_level === 'HIGH' ? <Badge className="bg-red-50 text-red-700 border-red-200 shadow-none">High</Badge> :
+                       claim.fraud_risk_level === 'MEDIUM' ? <Badge className="bg-amber-50 text-amber-700 border-amber-200 shadow-none">Medium</Badge> :
+                       <Badge className="bg-green-50 text-green-700 border-green-200 shadow-none">Low</Badge>}
+                    </TableCell>
+                    <TableCell>
+                      {claim.status === 'APPROVED' ? <Badge className="bg-green-50 text-green-700 border-green-200 shadow-none">Approved</Badge> :
+                       claim.status === 'FLAGGED' ? <Badge className="bg-red-50 text-red-700 border-red-200 shadow-none">Flagged</Badge> :
+                       <Badge className="bg-slate-100 text-slate-700 border-slate-200 shadow-none">{claim.status}</Badge>}
+                    </TableCell>
+                    <TableCell className="text-slate-500 text-sm">{new Date(claim.created_at).toLocaleDateString()}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>

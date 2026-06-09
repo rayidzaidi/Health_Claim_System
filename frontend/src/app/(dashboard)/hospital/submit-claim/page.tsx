@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -22,6 +22,175 @@ export default function SubmitClaim() {
   });
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [policyDetails, setPolicyDetails] = useState<any>(null);
+  const [policyError, setPolicyError] = useState<string>("");
+  const [policyLoading, setPolicyLoading] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchPolicy = async () => {
+      const policyId = parseInt(formData.policy_id);
+      if (isNaN(policyId)) {
+        setPolicyDetails(null);
+        setPolicyError("Please enter a valid Policy ID number.");
+        return;
+      }
+      
+      setPolicyLoading(true);
+      setPolicyError("");
+      try {
+        const res = await api.get(`/policies/${policyId}`);
+        setPolicyDetails(res.data);
+      } catch (err: any) {
+        setPolicyDetails(null);
+        if (err.response?.status === 404) {
+          setPolicyError("Policy ID not found in database.");
+        } else {
+          setPolicyError("Failed to fetch policy details.");
+        }
+      } finally {
+        setPolicyLoading(false);
+      }
+    };
+
+    const delayDebounce = setTimeout(() => {
+      if (formData.policy_id) {
+        fetchPolicy();
+      } else {
+        setPolicyDetails(null);
+        setPolicyError("");
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(delayDebounce);
+  }, [formData.policy_id]);
+
+  const getValidation = () => {
+    if (policyLoading) {
+      return {
+        statusText: "Verifying policy...",
+        statusColor: "text-blue-500",
+        coverageText: "Checking remaining amount...",
+        coverageColor: "text-blue-500",
+        riskText: "Analyzing risk...",
+        riskColor: "text-blue-600",
+        riskLevel: "ANALYZING"
+      };
+    }
+
+    if (policyError) {
+      return {
+        statusText: "Invalid Policy",
+        statusColor: "text-red-500",
+        coverageText: "N/A",
+        coverageColor: "text-slate-400",
+        riskText: `Critical Risk: ${policyError}`,
+        riskColor: "text-red-500",
+        riskLevel: "CRITICAL"
+      };
+    }
+
+    if (!policyDetails) {
+      return {
+        statusText: "No Policy Checked",
+        statusColor: "text-slate-400",
+        coverageText: "N/A",
+        coverageColor: "text-slate-400",
+        riskText: "Enter a valid Policy ID and Patient ID to run risk scoring.",
+        riskColor: "text-slate-500",
+        riskLevel: "NONE"
+      };
+    }
+
+    const checks: string[] = [];
+    let riskPoints = 0;
+
+    // 1. Policy Status
+    const isExpired = new Date(policyDetails.end_date) < new Date();
+    const isInactive = policyDetails.status !== "ACTIVE";
+    let statusText = policyDetails.status;
+    let statusColor = "text-green-500";
+    if (isExpired || isInactive) {
+      statusText = isExpired ? "EXPIRED" : policyDetails.status;
+      statusColor = "text-red-500";
+      checks.push("Policy is expired or inactive.");
+      riskPoints += 50;
+    }
+
+    // 2. Patient ID Mismatch
+    const formPatientId = parseInt(formData.patient_id);
+    if (isNaN(formPatientId) || formPatientId !== policyDetails.patient_id) {
+      checks.push(`Patient ID mismatch (Policy owned by Patient ID ${policyDetails.patient_id}).`);
+      riskPoints += 60;
+    }
+
+    // 3. Treatment Date Range
+    const treatmentDate = new Date(formData.treatment_date);
+    const startDate = new Date(policyDetails.start_date);
+    const endDate = new Date(policyDetails.end_date);
+    if (treatmentDate < startDate || treatmentDate > endDate) {
+      checks.push("Treatment date outside policy active timeline.");
+      riskPoints += 40;
+    }
+
+    // 4. Claim Amount Limit
+    const claimAmount = parseFloat(formData.claim_amount) || 0;
+    if (claimAmount > policyDetails.remaining_amount) {
+      checks.push(`Claim exceeds remaining coverage ($${policyDetails.remaining_amount.toLocaleString()}).`);
+      riskPoints += 50;
+    } else if (claimAmount > policyDetails.claim_limit_per_case) {
+      checks.push(`Claim exceeds per-case limit ($${policyDetails.claim_limit_per_case.toLocaleString()}).`);
+      riskPoints += 30;
+    }
+
+    // 5. Treatment Coverage Check
+    const isCoveredDisease = policyDetails.covered_diseases
+      .toLowerCase()
+      .split(",")
+      .some((disease: string) => {
+        const d = disease.trim();
+        return (
+          formData.treatment_type.toLowerCase().includes(d) ||
+          formData.diagnosis.toLowerCase().includes(d)
+        );
+      });
+
+    if (formData.treatment_type && formData.diagnosis && !isCoveredDisease) {
+      checks.push("Diagnosis/Treatment type not listed in covered diseases.");
+      riskPoints += 25;
+    }
+
+    // Determine overall risk
+    let riskLevel = "LOW";
+    let riskColor = "text-green-600";
+    let riskText = "Low Risk - Claim details conform to policy parameters.";
+
+    if (riskPoints >= 80) {
+      riskLevel = "CRITICAL";
+      riskColor = "text-red-600 font-bold";
+      riskText = `Critical Risk: ${checks.join(" ")}`;
+    } else if (riskPoints >= 40) {
+      riskLevel = "HIGH";
+      riskColor = "text-red-500 font-semibold";
+      riskText = `High Risk: ${checks.join(" ")}`;
+    } else if (riskPoints > 0) {
+      riskLevel = "MEDIUM";
+      riskColor = "text-amber-600 font-medium";
+      riskText = `Medium Risk: ${checks.join(" ")}`;
+    }
+
+    return {
+      statusText: `${statusText} (Valid until ${new Date(policyDetails.end_date).toLocaleDateString()})`,
+      statusColor,
+      coverageText: `$${policyDetails.remaining_amount.toLocaleString()} available`,
+      coverageColor: policyDetails.remaining_amount > 0 && claimAmount <= policyDetails.remaining_amount ? "text-slate-700" : "text-red-500",
+      riskText,
+      riskColor,
+      riskLevel
+    };
+  };
+
+  const validation = getValidation();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -221,28 +390,27 @@ export default function SubmitClaim() {
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100">
                   <div className="p-4 flex items-start space-x-3">
-                    <ShieldCheck className="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+                    <ShieldCheck className={`w-5 h-5 mt-0.5 shrink-0 ${validation.statusColor}`} />
                     <div>
                       <p className="text-sm font-medium text-slate-900">Policy Status</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Active (Valid until Dec 2026)</p>
+                      <p className={`text-xs mt-0.5 ${validation.statusColor}`}>{validation.statusText}</p>
                     </div>
                   </div>
                   <div className="p-4 flex items-start space-x-3">
-                    <Activity className="w-5 h-5 text-blue-500 mt-0.5 shrink-0" />
+                    <Activity className={`w-5 h-5 mt-0.5 shrink-0 ${validation.coverageColor}`} />
                     <div>
                       <p className="text-sm font-medium text-slate-900">Coverage Remaining</p>
-                      <p className="text-xs text-slate-500 mt-0.5">$350,000.00 available</p>
+                      <p className={`text-xs mt-0.5 ${validation.coverageColor}`}>{validation.coverageText}</p>
                     </div>
                   </div>
                   <div className="p-4 flex items-start space-x-3">
-                    <CheckCircle2 className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                    <CheckCircle2 className={`w-5 h-5 mt-0.5 shrink-0 ${
+                      validation.riskLevel === "LOW" ? "text-green-500" :
+                      validation.riskLevel === "MEDIUM" ? "text-amber-500" : "text-red-500"
+                    }`} />
                     <div className="w-full">
-                      <p className="text-sm font-medium text-slate-900">Estimated Risk</p>
-                      {parseFloat(formData.claim_amount) > 100000 ? (
-                        <p className="text-xs text-red-500 mt-0.5 font-medium">High - Exceeds typical limits</p>
-                      ) : (
-                        <p className="text-xs text-amber-600 mt-0.5 font-medium">Medium Analysis</p>
-                      )}
+                      <p className="text-sm font-medium text-slate-900">Estimated Risk Analysis</p>
+                      <p className={`text-xs mt-0.5 ${validation.riskColor}`}>{validation.riskText}</p>
                     </div>
                   </div>
                 </div>

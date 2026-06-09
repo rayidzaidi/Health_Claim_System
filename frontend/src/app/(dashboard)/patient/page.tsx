@@ -6,15 +6,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function PatientDashboard() {
-  const [policies, setPolicies] = useState<any[]>([]);
+  const [policies, setPolicies] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      const cached = sessionStorage.getItem("cached_patient_policies");
+      return cached ? JSON.parse(cached) : [];
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState(policies.length === 0);
 
   useEffect(() => {
     const fetchPolicies = async () => {
       try {
         const res = await api.get("/policies/");
         setPolicies(res.data);
+        sessionStorage.setItem("cached_patient_policies", JSON.stringify(res.data));
       } catch (err) {
         console.error(err);
+      } finally {
+        setLoading(false);
       }
     };
     fetchPolicies();
@@ -28,7 +38,27 @@ export default function PatientDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {policies.map((policy) => (
+        {loading && policies.length === 0 ? (
+          Array.from({ length: 3 }).map((_, idx) => (
+            <Card key={idx} className="border border-slate-200 shadow-sm rounded-xl overflow-hidden bg-white animate-pulse">
+              <div className="p-6 border-b border-slate-100/50 bg-slate-50 flex justify-between items-center h-16">
+                <div className="h-4 w-28 bg-slate-200 rounded" />
+                <div className="h-6 w-16 bg-slate-200 rounded-full" />
+              </div>
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <div className="h-3 w-24 bg-slate-100 rounded" />
+                  <div className="h-8 w-36 bg-slate-200 rounded" />
+                </div>
+                <div className="space-y-2 pt-4 border-t border-slate-100">
+                  <div className="h-4 w-full bg-slate-100 rounded" />
+                  <div className="h-4 w-full bg-slate-100 rounded" />
+                </div>
+              </div>
+            </Card>
+          ))
+        ) : (
+          policies.map((policy) => (
           <Card key={policy.id} className="glass-card border-none overflow-hidden relative group">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             <CardHeader className="p-6 border-b border-slate-100/50 bg-white/40">
@@ -60,8 +90,9 @@ export default function PatientDashboard() {
               </div>
             </CardContent>
           </Card>
-        ))}
-        {policies.length === 0 && (
+        ))
+      )}
+        {!loading && policies.length === 0 && (
           <div className="text-slate-500">No active policies found.</div>
         )}
       </div>

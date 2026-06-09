@@ -3,8 +3,27 @@ import { Button } from "@/components/ui/button";
 import { ShieldCheck, ArrowRight, Activity, Database, CheckCircle2 } from "lucide-react";
 
 export default function Home() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SmartHealth Claims Portal",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+    },
+    "description": "Automated claim validation, risk scoring, and clinical policy audits for healthcare insurance networks.",
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-slate-50 font-sans">
+      {/* Schema.org Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header */}
       <header className="h-16 bg-white border-b border-slate-200 px-6 lg:px-12 flex items-center justify-between">
         <div className="flex items-center space-x-2">
