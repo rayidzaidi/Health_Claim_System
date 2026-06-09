@@ -12,17 +12,18 @@ import { Badge } from "@/components/ui/badge";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<any>(() => {
-    if (typeof window !== "undefined") {
-      const cached = localStorage.getItem("cached_user");
-      return cached ? JSON.parse(cached) : null;
-    }
-    return null;
-  });
+  const [user, setUser] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    const cached = localStorage.getItem("cached_user");
+    if (cached) {
+      setUser(JSON.parse(cached));
+    }
+
     const fetchUser = async () => {
       try {
         const res = await api.get("/auth/me");
@@ -62,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     router.push("/");
   };
 
-  if (!user) {
+  if (!mounted || !user) {
     return (
       <div className="flex h-screen bg-slate-50/50 overflow-hidden relative animate-pulse">
         {/* Sidebar Skeleton */}

@@ -10,30 +10,23 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
 export default function AdminDashboard() {
-  const [stats, setStats] = useState<any>(() => {
-    if (typeof window !== "undefined") {
-      const cached = sessionStorage.getItem("cached_admin_stats");
-      return cached ? JSON.parse(cached) : null;
-    }
-    return null;
-  });
-  const [recentClaims, setRecentClaims] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      const cached = sessionStorage.getItem("cached_admin_recent_claims");
-      return cached ? JSON.parse(cached) : [];
-    }
-    return [];
-  });
-  const [allClaims, setAllClaims] = useState<any[]>(() => {
-    if (typeof window !== "undefined") {
-      const cached = sessionStorage.getItem("cached_admin_all_claims");
-      return cached ? JSON.parse(cached) : [];
-    }
-    return [];
-  });
-  const [loading, setLoading] = useState(!stats);
+  const [stats, setStats] = useState<any>(null);
+  const [recentClaims, setRecentClaims] = useState<any[]>([]);
+  const [allClaims, setAllClaims] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+    const cachedStats = sessionStorage.getItem("cached_admin_stats");
+    const cachedRecent = sessionStorage.getItem("cached_admin_recent_claims");
+    const cachedAll = sessionStorage.getItem("cached_admin_all_claims");
+
+    if (cachedStats) setStats(JSON.parse(cachedStats));
+    if (cachedRecent) setRecentClaims(JSON.parse(cachedRecent));
+    if (cachedAll) setAllClaims(JSON.parse(cachedAll));
+    if (cachedStats) setLoading(false);
+
     const fetchStats = async () => {
       try {
         const res = await api.get("/reports/dashboard-summary");
@@ -56,7 +49,7 @@ export default function AdminDashboard() {
       } catch (err) {
         console.error(err);
       }
-    }
+    };
     fetchStats();
     fetchClaims();
   }, []);
