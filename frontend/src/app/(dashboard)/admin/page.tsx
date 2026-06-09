@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, Activity, XCircle, CheckCircle2, FileText, AlertTriangle } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { DashboardSkeleton } from "@/components/dashboard-skeleton";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(() => {
@@ -76,6 +77,15 @@ export default function AdminDashboard() {
     { name: "Medium", count: mediumRisk },
     { name: "Low", count: lowRisk },
   ];
+
+  if (loading && !stats) {
+    return (
+      <DashboardSkeleton
+        title="System Overview"
+        subtitle="High-level view of claim processing and fraud metrics."
+      />
+    );
+  }
 
   return (
     <div className="space-y-8">

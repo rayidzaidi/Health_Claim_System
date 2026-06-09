@@ -14,6 +14,6 @@ export default function robots(): MetadataRoute.Robots {
         "/notifications/",
       ],
     },
-    sitemap: "https://health-claim-system-ccp.vercel.app/sitemap.xml",
+    sitemap: "https://health-claim-system.vercel.app/sitemap.xml",
   };
 }

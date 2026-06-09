@@ -10,7 +10,7 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Smart Health Insurance Claims",
   description: "Automated claim validation and fraud risk scoring",
-  metadataBase: new URL("https://health-claim-system-ccp.vercel.app"),
+  metadataBase: new URL("https://health-claim-system.vercel.app"),
   keywords: [
     "health insurance",
     "claims auditing",
@@ -35,11 +35,11 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Smart Health Insurance Claims Processing & Audit Portal",
     description: "Enterprise validation, real-time clinical policy audits, and machine-learning fraud analysis.",
-    url: "https://health-claim-system-ccp.vercel.app",
+    url: "https://health-claim-system.vercel.app",
     siteName: "SmartHealth",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "SmartHealth Claim Auditing System Cover",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Smart Health Insurance Claims Processing & Audit Portal",
     description: "Enterprise validation, real-time clinical policy audits, and machine-learning fraud analysis.",
-    images: ["/og-image.png"],
+    images: ["/og-image.jpg"],
   },
 };
 
