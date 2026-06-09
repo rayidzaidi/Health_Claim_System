@@ -2,6 +2,7 @@ fastapi
 uvicorn
 sqlalchemy
 pydantic
+pydantic-settings
 passlib[bcrypt]
 python-jose[cryptography]
 python-multipart
@@ -9,3 +10,4 @@ scikit-learn
 pandas
 numpy
 email-validator
+psycopg2-binary
